@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 提示詞工程（Prompt Engineering）基礎入門｜教學簡報</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #eef6ff 0%, #f6effb 100%);
+      --card-bg: #ffffff;
+      --primary: #5b7cfa;
+      --secondary: #9b72cf;
+      --text-main: #2c3440;
+      --text-muted: #5c6778;
+      --ok-bg: #eefbf3;
+      --ok-border: #34c759;
+      --ng-bg: #fff1f2;
+      --ng-border: #ff4d6d;
+      --tag-bg: #e8eeff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .deck-container {
+      width: 100%;
+      max-width: 880px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(91, 124, 250, 0.12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 540px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: #fafbff;
+      border-bottom: 1px solid #edf0f7;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .badge {
+      background: var(--tag-bg);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .progress-bar { width: 100%; height: 4px; background: #edf0f7; }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.3s ease;
+    }
+    .slide {
+      display: none;
+      padding: 32px 28px;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+    .slide.active { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h1 {
+      font-size: 1.85rem;
+      line-height: 1.3;
+      margin-bottom: 12px;
+      background: linear-gradient(90deg, #3b5bdb, #845ef7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    h2 { font-size: 1.45rem; margin-bottom: 14px; color: #2b3a55; }
+    p.lead { font-size: 1.05rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .slide { padding: 24px 18px; }
+      h1 { font-size: 1.5rem; }
+    }
+    .box {
+      padding: 16px;
+      border-radius: 14px;
+      background: #f8faff;
+      border: 1px solid #e6ecfa;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+    .box.ng { background: var(--ng-bg); border-left: 4px solid var(--ng-border); border-top: none; border-right: none; border-bottom: none; }
+    .box.ok { background: var(--ok-bg); border-left: 4px solid var(--ok-border); border-top: none; border-right: none; border-bottom: none; }
+    .box-title { font-weight: 700; margin-bottom: 6px; display: block; }
+    pre {
+      background: #1e2430;
+      color: #e6edf3;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+    ul.clean-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    ul.clean-list li {
+      padding: 12px 16px;
+      background: #f7f9fc;
+      border-radius: 12px;
+      border-left: 4px solid var(--primary);
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: #fafbff;
+      border-top: 1px solid #edf0f7;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-prev { background: #eef1f8; color: #4a5568; }
+    .btn-prev:hover:not(:disabled) { background: #e2e8f0; }
+    .btn-next { background: var(--primary); color: #fff; }
+    .btn-next:hover:not(:disabled) { background: #4668e8; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .wiki-ref { margin-top: 16px; font-size: 0.8rem; color: #7b8794; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="deck-container">
+    <div class="top-bar">
+      <span class="badge">LLM Wiki 教學簡報</span>
+      <span id="page-indicator">1 / 7</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width: 14.28%;"></div></div>
+
+    <div class="slide active">
+      <span class="badge" style="width: fit-content; margin-bottom: 14px;">給 AI 初學者的第一堂課</span>
+      <h1>AI 提示詞工程（Prompt Engineering）基礎入門</h1>
+      <p class="lead">為什麼同樣問 ChatGPT 或 Gemini，有人得到專業精準的報告，有人卻得到空泛廢話？差別就在於你如何設計「指令結構」。</p>
+      <div class="grid-2">
+        <div class="box">
+          <span class="box-title">🎯 本簡報學習目標</span>
+          掌握 5 大核心提示詞技巧，從「隨口問問」進階到「穩定控制 AI 產出品質」。
+        </div>
+        <div class="box">
+          <span class="box-title">📚 知識庫來源（LLM Wiki）</span>
+          整合 5 篇結構化筆記：角色設定、限制條件、少樣本範例、思維鏈推理、自我檢查迴圈。
+        </div>
+      </div>
+    </div>
+
+    <div class="slide">
+      <h2>1. 角色與目標設定（Role & Goal）</h2>
+      <p class="lead">大型語言模型擁有跨領域知識，若不指定身分，模型會給出「平均化」的平庸答案。設定角色能精準鎖定專業視角與語氣。</p>
+      <div class="grid-2">
+        <div class="box ng">
+          <span class="box-title">❌ NG 寫法（過於籠統）</span>
+          「幫我介紹什麼是機器學習。」<br><small>→ 結果：吐出長篇大論的維基百科式學術定義，初學者看不懂。</small>
+        </div>
+        <div class="box ok">
+          <span class="box-title">✅ OK 寫法（角色＋受眾＋目標）</span>
+          「你是一位擅長生活比喻的科普作家，請用 150 字向高中生解釋機器學習，並舉一個手機日常應用的例子。」
+        </div>
+      </div>
+      <div class="wiki-ref">來源對應：wiki/01_角色與目標設定.md</div>
+    </div>
+
+    <div class="slide">
+      <h2>2. 情境背景與限制條件（Context & Constraints）</h2>
+      <p class="lead"><strong>Context</strong> 決定回答的貼合度，<strong>Constraints</strong> 用來防止模型自由發揮過頭（減少 AI 幻覺與排版混亂）。</p>
+      <ul class="clean-list">
+        <li><strong>資料來源邊界</strong>：「僅根據以下提供的文章內容回答，若未提及請直接回答『資料未提及』，切勿自行編造。」</li>
+        <li><strong>輸出格式規範</strong>：「請以 Markdown 表格呈現，欄位包含優點、缺點、適用情境，每格不超過 20 字。」</li>
+        <li><strong>語氣與長度控制</strong>：「省略開場白與結語，直接條列 3 點核心結論。」</li>
+      </ul>
+      <div class="wiki-ref">來源對應：wiki/02_情境背景與限制條件.md</div>
+    </div>
+
+    <div class="slide">
+      <h2>3. 少樣本提示法（Few-Shot Prompting）</h2>
+      <p class="lead">當任務牽涉特定格式或分類標準時，與其寫 500 字規則，不如直接給模型 <strong>2～3 組「輸入 → 輸出」範例</strong>讓它模仿。</p>
+      <pre>請將使用者評價分類為【正面】、【中性】或【負面】：
+
+輸入：出貨速度很快，但包裝盒稍微壓到了。
+輸出：【中性】
+
+輸入：材質比想像中舒服很多，一定會再回購！
+輸出：【正面】
+
+輸入：等了兩週才收到，客服回覆也很敷衍。
+輸出： 【負面】 ← 模型會自動依照相同格式接續完成</pre>
+      <div class="wiki-ref">來源對應：wiki/03_少樣本提示法.md</div>
+    </div>
+
+    <div class="slide">
+      <h2>4. 思維鏈推理（Chain-of-Thought, CoT）</h2>
+      <p class="lead">LLM 採逐字預測機制，遇到多步驟計算或邏輯推理時，直接要答案極易出錯。要求模型<strong>「先列出思考步驟再給結論」</strong>能大幅提升準確率。</p>
+      <div class="grid-2">
+        <div class="box ng">
+          <span class="box-title">❌ 直接索取答案</span>
+          「原價 800 打 75 折，滿 500 折 50 後加 5% 稅是多少？直接給數字。」<br><small>→ 容易在心算跳步時算錯。</small>
+        </div>
+        <div class="box ok">
+          <span class="box-title">✅ 觸發思維鏈（CoT）</span>
+          「請一步一步思考：(1) 計算 75 折價格 (600元)；(2) 扣除滿額折 50 (550元)；(3) 乘以 1.05 並四捨五入得 <strong>578 元</strong>。」
+        </div>
+      </div>
+      <div class="wiki-ref">來源對應：wiki/04_思維鏈推理.md</div>
+    </div>
+
+    <div class="slide">
+      <h2>5. 自我檢查與迭代優化（Self-Correction Loop）</h2>
+      <p class="lead">高品質的 AI 產出不是靠一次寫出完美咒語，而是透過<strong>「生成 → 檢查 → 修正」</strong>的閉環迴圈逐步收斂。</p>
+      <ul class="clean-list">
+        <li><strong>步驟 A（生成節點）</strong>：依據 Wiki 知識庫草擬教學投影片內容。</li>
+        <li><strong>步驟 B（檢查節點）</strong>：扮演「完全不懂 AI 的新手」，逐頁檢查是否缺少實際範例或脫離 Wiki 範圍。</li>
+        <li><strong>步驟 C（條件退回）</strong>：若檢查未通過，將具體錯誤原因退回步驟 A 重新生成，直到全部檢核項通過為止。</li>
+      </ul>
+      <div class="wiki-ref">來源對應：wiki/05_自我檢查與迭代優化.md</div>
+    </div>
+
+    <div class="slide">
+      <h2>總結：萬用提示詞 4 要素檢核表</h2>
+      <p class="lead">下次向 AI 提問前，花 10 秒鐘確認是否包含這四個積木：</p>
+      <div class="grid-2">
+        <div class="box">
+          <span class="box-title">1️⃣ Role（你是誰）</span>
+          設定專業身分與目標受眾，決定回答的深度。
+        </div>
+        <div class="box">
+          <span class="box-title">2️⃣ Context & Constraints（背景與邊界）</span>
+          提供參考資料，限制字數、格式與禁止編造。
+        </div>
+        <div class="box">
+          <span class="box-title">3️⃣ Few-Shot（給範例）</span>
+          附上 2 組輸入／輸出對照，統一輸出格式。
+        </div>
+        <div class="box">
+          <span class="box-title">4️⃣ CoT & Check（拆步驟與檢查）</span>
+          複雜任務要求「一步步思考」，並自我核對錯誤。
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-prev" id="prevBtn" onclick="changeSlide(-1)" disabled>← 上一頁</button>
+      <button class="btn-next" id="nextBtn" onclick="changeSlide(1)">下一頁 →</button>
+    </div>
+  </div>
+
+  <script>
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const indicator = document.getElementById('page-indicator');
+    const progress = document.getElementById('progress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function updateUI() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === current));
+      indicator.textContent = `${current + 1} / ${slides.length}`;
+      progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+    }
+
+    function changeSlide(dir) {
+      const next = current + dir;
+      if (next >= 0 && next < slides.length) {
+        current = next;
+        updateUI();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') changeSlide(1);
+      if (e.key === 'ArrowLeft') changeSlide(-1);
+    });
+  </script>
+</body>
+</html>
